@@ -11,11 +11,11 @@ It snaps onto the back of the phone like a MagSafe accessory, or comes off and s
 
 <br>
 
-<img src="docs/images/poko-demo.gif" width="420" alt="Breadboard prototype: turning the wheel through Pomodoro, the work timer, the break timer and a voice memo">
+<img src="docs/images/poko-front.jpg" width="210" alt="Poko prototype in hand, home screen on Voice Memos">
 &nbsp;
-<img src="docs/images/poko-v1b-open.jpg" width="236" alt="Printed V1B enclosure opened up, with the MagSafe-style magnet in the back cover">
+<img src="docs/images/poko-demo.gif" width="420" alt="Breadboard prototype: turning the wheel through Pomodoro, the work timer, the break timer and a voice memo">
 
-<sub>Left: breadboard prototype, wheel-driven Pomodoro → timer → voice memo (2.2× speed). Right: printed V1B enclosure with the magnet in the back cover.</sub>
+<sub>Left: the V1B prototype in hand, home ring on Voice Memos. Right: breadboard prototype, wheel-driven Pomodoro → timer → voice memo (2.2× speed).</sub>
 
 </div>
 
@@ -132,10 +132,11 @@ flowchart LR
 
 <table>
 <tr>
-<td align="center"><img src="docs/images/poko-breadboard.jpg" width="200"><br><sub>Breadboard bring-up</sub></td>
-<td align="center"><img src="docs/images/poko-protoboard.jpg" width="200"><br><sub>Protoboard for the first enclosure</sub></td>
-<td align="center"><img src="docs/images/poko-encoder-detent.jpg" width="200"><br><sub>EC11 opened to remove the detent spring</sub></td>
-<td align="center"><img src="docs/images/poko-encoder-cut.jpg" width="200"><br><sub>Cutting the encoder shaft down</sub></td>
+<td align="center"><img src="docs/images/poko-v1b-open.jpg" width="160"><br><sub>V1B opened: cell, wiring, magnet in the back cover</sub></td>
+<td align="center"><img src="docs/images/poko-breadboard.jpg" width="160"><br><sub>Breadboard bring-up</sub></td>
+<td align="center"><img src="docs/images/poko-protoboard.jpg" width="160"><br><sub>Protoboard for the first enclosure</sub></td>
+<td align="center"><img src="docs/images/poko-encoder-detent.jpg" width="160"><br><sub>EC11 opened to remove the detent spring</sub></td>
+<td align="center"><img src="docs/images/poko-encoder-cut.jpg" width="160"><br><sub>Cutting the encoder shaft down</sub></td>
 </tr>
 </table>
 
