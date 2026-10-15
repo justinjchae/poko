@@ -1,0 +1,245 @@
+(footprint "WL-SMCW_0603"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(descr "<B>WL-SMCW SMT Mono-color Chip LED Waterclear<Br><Br></B>Size: 0603, SMT, 2pins<Br>1.6x0.8x0.7mm(LXWXH)")
+	(property "Reference" "REF**"
+		(at 0 -1.4064 0)
+		(layer "F.SilkS")
+		(uuid "a7744f48-7b35-4d4d-ae2a-3aeaa3972022")
+		(effects
+			(font
+				(size 0.64 0.64)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "WL-SMCW_0603"
+		(at 0 1.2936 0)
+		(layer "F.Fab")
+		(uuid "652f77ea-6ac8-499c-bfdc-e56216700fe5")
+		(effects
+			(font
+				(size 0.64 0.64)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Footprint" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "7bed3e54-d76e-48a2-9ba1-2924043f514c")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "dd676796-a32b-41ba-a7c0-4cdc2ba7bca9")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "55c6e33e-9af7-4e11-95f2-ab12a405a7e3")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_line
+		(start -0.13 0)
+		(end 0.11 -0.14)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "fb9bd8c2-7e55-488d-8fe1-2cb52658626d")
+	)
+	(fp_line
+		(start -0.1 -0.5)
+		(end 0.1 -0.5)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "06673ae2-116e-4c41-afd1-a486ac4afce7")
+	)
+	(fp_line
+		(start 0.1 0.5)
+		(end -0.1 0.5)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "9ebdd9d4-abdf-4370-917a-b515eef3963b")
+	)
+	(fp_line
+		(start 0.11 -0.14)
+		(end 0.11 0.15)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "b9d17f8e-2da8-4543-93ba-d815575e979e")
+	)
+	(fp_line
+		(start 0.11 0.15)
+		(end -0.13 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "069ad832-1ddd-4833-b9f9-98b203a5e7fd")
+	)
+	(fp_poly
+		(pts
+			(xy -1.4 -0.7) (xy 1.4 -0.7) (xy 1.4 0.7) (xy -1.4 0.7)
+		)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill solid)
+		(layer "F.CrtYd")
+		(uuid "a94c29bf-5fa5-4e46-b77d-e0bb466a9a07")
+	)
+	(fp_line
+		(start -0.8 -0.4)
+		(end 0.8 -0.4)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "e8d5e5a9-b233-472a-9d20-4b011fbd3ed5")
+	)
+	(fp_line
+		(start -0.8 0.4)
+		(end -0.8 -0.4)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "d7ce835a-8b48-48b3-89a8-6db182424dd6")
+	)
+	(fp_line
+		(start -0.8 0.4)
+		(end 0.8 0.4)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "f170d86e-8177-48c0-926d-c03d894510ca")
+	)
+	(fp_line
+		(start -0.13 0)
+		(end 0.11 -0.14)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "f96c0766-1db1-45b2-9d54-cba07ed383bc")
+	)
+	(fp_line
+		(start 0.11 -0.14)
+		(end 0.11 0.15)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "9cea69ab-0060-4ca7-b3a3-b6545f92f754")
+	)
+	(fp_line
+		(start 0.11 0.15)
+		(end -0.13 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "912df77a-05b4-4d08-aa9d-bdc65dc672cb")
+	)
+	(fp_line
+		(start 0.8 -0.4)
+		(end 0.8 0.4)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "9c110788-0ebd-4c6b-84e1-9de36a693a6c")
+	)
+	(fp_text user "+"
+		(at 1.6 0.3 0)
+		(layer "F.SilkS")
+		(uuid "657326dd-0aca-4487-b9cd-a839580fbbf2")
+		(effects
+			(font
+				(size 0.48 0.48)
+				(thickness 0.15)
+			)
+		)
+	)
+	(fp_text user "+"
+		(at 1.6 0.3 0)
+		(layer "F.Fab")
+		(uuid "a60a87d5-956a-4111-a311-29ca8c7bfe7c")
+		(effects
+			(font
+				(size 0.48 0.48)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" smd rect
+		(at -0.8 0)
+		(size 0.8 0.8)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(solder_mask_margin 0.102)
+		(uuid "42913540-3c37-4838-810a-6f3c25065a25")
+	)
+	(pad "2" smd rect
+		(at 0.8 0)
+		(size 0.8 0.8)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(solder_mask_margin 0.102)
+		(uuid "549e0e14-0ba5-4a58-8446-a298c29c43a2")
+	)
+	(model "${KIPRJMOD}/Pokodoro_3DModels/WL-SMCW_0603.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -90 0 0)
+		)
+	)
+)

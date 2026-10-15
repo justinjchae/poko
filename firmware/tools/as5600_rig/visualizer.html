@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AS5600 Visualizer</title>
+<style>
+  :root { --bg:#0b0b0c; --panel:#151517; --line:#2a2a2e; --fg:#f2f2f2; --dim:#8a8a90; --accent:#4cc9f0; --ok:#5ee38b; --warn:#ffb454; --bad:#ff6b6b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 -apple-system, system-ui, sans-serif; }
+  header { display:flex; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  h1 { font-size:15px; margin:0 8px 0 0; font-weight:600; }
+  button { background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  #status { color:var(--dim); margin-left:auto; }
+  main { display:grid; grid-template-columns: 340px 1fr; gap:16px; padding:16px; }
+  @media (max-width:800px) { main { grid-template-columns:1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  canvas { width:100%; display:block; }
+  #dial { aspect-ratio:1; }
+  #trace { height:230px; }
+  #mag { height:130px; }
+  .read { display:grid; grid-template-columns:repeat(2,1fr); gap:8px 12px; margin-top:10px; }
+  .read div span { display:block; color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  .read div b { font:600 20px ui-monospace, Menlo, monospace; }
+  .col { display:flex; flex-direction:column; gap:16px; }
+  .label { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+  #magnet { font-weight:600; }
+  .zrow { display:grid; grid-template-columns:200px 1fr; gap:16px; align-items:center; }
+  #zside { aspect-ratio:1; }
+  .hint { color:var(--dim); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AS5600 visualizer</h1>
+  <button id="connect">Connect</button>
+  <button id="zero">Zero angle</button>
+  <button id="rest">Set Z rest</button>
+  <button id="pause">Pause</button>
+  <button id="save">Save CSV</button>
+  <span id="status">Not connected</span>
+</header>
+<main>
+  <div class="panel">
+    <canvas id="dial" width="600" height="600"></canvas>
+    <div class="read">
+      <div><span>Angle</span><b id="rAngle">–</b></div>
+      <div><span>Total turned</span><b id="rTurns">–</b></div>
+      <div><span>Speed</span><b id="rSpeed">–</b></div>
+      <div><span>Noise (1 s, counts)</span><b id="rNoise">–</b></div>
+      <div><span>AGC</span><b id="rAgc">–</b></div>
+      <div><span>Magnet</span><b id="magnet">–</b></div>
+    </div>
+    <div class="hint">Raw 12-bit value: <span id="rRaw">–</span>. Hold a magnet flat over the chip and rotate it. Noise is the std dev of the raw reading over the last second, so it is only meaningful while holding still.</div>
+  </div>
+  <div class="col">
+    <div class="panel zrow">
+      <canvas id="zside" width="260" height="260"></canvas>
+      <div>
+        <div class="label">Z (press) from AGC — a press moves the magnet toward the chip, the field strengthens and AGC falls, so lower AGC = magnet drawn lower</div>
+        <div class="read">
+          <div><span>AGC (smoothed)</span><b id="zMag">–</b></div>
+          <div><span>Change from rest</span><b id="zDelta">–</b></div>
+          <div><span>Window range</span><b id="zRange">–</b></div>
+          <div><span>Rest</span><b id="zRest">not set</b></div>
+          <div><span>Fall in 50 ms</span><b id="zRate">–</b></div>
+          <div><span>Press (fall ≥ 18, then still 150 ms)</span><b id="zPress">–</b></div>
+        </div>
+        <div class="hint">Hold the magnet at the working gap and click <b>Set Z rest</b>, then press toward the chip or lift away. AGC is not linear in distance, so read the % change as a relative press depth, not millimetres.</div>
+      </div>
+    </div>
+    <div class="panel"><div class="label">Angle over the last 10 s (unwrapped, degrees)</div><canvas id="trace" width="1000" height="230"></canvas></div>
+    <div class="panel"><div class="label">AGC (blue, 0–128, left axis) and magnitude (white) — AGC falls on a press; magnitude is held near 2048 by the AGC</div><canvas id="mag" width="1000" height="130"></canvas></div>
+  </div>
+</main>
+<script>
+const WINDOW_MS = 10000;
+const els = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+let samples = [];          // {t, raw, deg (unwrapped), agc, mag, st}
+let lastRaw = null, unwrapped = 0, zeroOffset = 0, paused = false, marks = [];
+let allRows = ["t_ms,raw_angle,agc,magnitude,status"];
+let port = null;
+
+function addSample(t, raw, agc, mag, st) {
+  if (lastRaw !== null) {
+    let d = raw - lastRaw;
+    if (d > 2048) d -= 4096; else if (d < -2048) d += 4096;
+    unwrapped += d * 360 / 4096;
+  } else unwrapped = raw * 360 / 4096;
+  lastRaw = raw;
+  samples.push({t, raw, deg: unwrapped, agc, mag, st});
+  while (samples.length && t - samples[0].t > WINDOW_MS) samples.shift();
+}
+
+function parseLine(line) {
+  line = line.trim();
+  if (!line) return;
+  allRows.push(line);
+  if (line[0] === '#') {
+    if (line.startsWith('#mark')) marks.push({t: samples.length ? samples[samples.length-1].t : 0, c: line.slice(6)});
+    return;
+  }
+  const p = line.split(',').map(Number);
+  if (p.length !== 5 || p.some(isNaN)) return;
+  if (!paused) addSample(p[0], p[1], p[2], p[3], p[4]);
+}
+
+async function connect() {
+  if (!('serial' in navigator)) { els('status').textContent = 'Web Serial needs Chrome or Edge'; return; }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({baudRate: 115200});
+  } catch (e) { els('status').textContent = 'Could not open: ' + e.message; return; }
+  els('status').textContent = 'Connected';
+  els('connect').textContent = 'Connected';
+  const dec = new TextDecoderStream();
+  port.readable.pipeTo(dec.writable).catch(() => {});
+  const reader = dec.readable.getReader();
+  let buf = '';
+  try {
+    for (;;) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += value;
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) { parseLine(buf.slice(0, i)); buf = buf.slice(i + 1); }
+    }
+  } catch (e) { /* unplugged */ }
+  els('status').textContent = 'Disconnected';
+  els('connect').textContent = 'Connect';
+}
+
+els('connect').onclick = connect;
+els('zero').onclick = () => { if (samples.length) zeroOffset = samples[samples.length-1].deg; };
+let zRest = null, cand = null, pressUntil = 0;
+els('rest').onclick = () => {
+  const r = samples.slice(-30); if (!r.length) return;
+  zRest = r.reduce((a, p) => a + p.agc, 0) / r.length;
+  els('zRest').textContent = zRest.toFixed(1);
+};
+els('pause').onclick = () => { paused = !paused; els('pause').textContent = paused ? 'Resume' : 'Pause'; };
+els('save').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([allRows.join('\n') + '\n'], {type:'text/csv'}));
+  a.download = 'as5600_capture_' + new Date().toISOString().replace(/[:.]/g,'-') + '.csv';
+  a.click();
+};
+document.addEventListener('keydown', e => {
+  if (port && port.writable && e.key.length === 1 && e.key > ' ') {
+    const w = port.writable.getWriter();
+    w.write(new TextEncoder().encode(e.key)).finally(() => w.releaseLock());
+  }
+});
+
+function fit(c) {
+  const r = c.getBoundingClientRect(), s = devicePixelRatio || 1;
+  const w = Math.round(r.width * s), h = Math.round(r.height * s);
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  return [c.getContext('2d'), w, h, s];
+}
+
+function drawDial(cur) {
+  const [g, w, h, s] = fit(els('dial'));
+  g.clearRect(0, 0, w, h);
+  const cx = w/2, cy = h/2, R = Math.min(w, h)/2 - 24*s;
+  g.strokeStyle = css('--line'); g.lineWidth = 2*s;
+  g.beginPath(); g.arc(cx, cy, R, 0, 7); g.stroke();
+  g.fillStyle = css('--dim'); g.font = `${12*s}px ui-monospace, Menlo, monospace`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let a = 0; a < 360; a += 10) {
+    const r = (a - 90) * Math.PI/180, major = a % 90 === 0, i = R - (major ? 16 : 8)*s;
+    g.beginPath(); g.moveTo(cx + Math.cos(r)*i, cy + Math.sin(r)*i); g.lineTo(cx + Math.cos(r)*R, cy + Math.sin(r)*R); g.stroke();
+    if (major) g.fillText(a, cx + Math.cos(r)*(R - 30*s), cy + Math.sin(r)*(R - 30*s));
+  }
+  if (!cur) return;
+  const deg = ((cur.deg - zeroOffset) % 360 + 360) % 360, r = (deg - 90) * Math.PI/180;
+  // trail of recent positions
+  const now = cur.t;
+  for (const p of samples) {
+    const age = now - p.t; if (age > 1500) continue;
+    const pr = (((p.deg - zeroOffset) % 360 + 360) % 360 - 90) * Math.PI/180;
+    g.fillStyle = `rgba(76,201,240,${0.35*(1 - age/1500)})`;
+    g.beginPath(); g.arc(cx + Math.cos(pr)*R*0.82, cy + Math.sin(pr)*R*0.82, 4*s, 0, 7); g.fill();
+  }
+  g.strokeStyle = css('--accent'); g.lineWidth = 5*s; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(r)*R*0.9, cy + Math.sin(r)*R*0.9); g.stroke();
+  g.fillStyle = css('--fg'); g.beginPath(); g.arc(cx, cy, 7*s, 0, 7); g.fill();
+}
+
+function drawZ(cur) {
+  const [g, w, h, s] = fit(els('zside'));
+  g.clearRect(0, 0, w, h);
+  const recent = samples.slice(-5);
+  if (!recent.length) return;
+  const mag = recent.reduce((a, p) => a + p.agc, 0) / recent.length;
+  const mags = samples.map(p => p.agc), lo = Math.min(...mags), hi = Math.max(...mags);
+  let f;                                    // 1 = magnet drawn at the top (far), 0 = at the bottom (near the chip); lower AGC = nearer
+  if (zRest) f = 0.5 + Math.max(-1, Math.min(1, (mag / zRest - 1) / 0.6)) * 0.4;
+  else { const span = Math.max(10, hi - lo); f = 0.1 + 0.8 * (mag - (lo + hi - span)/2) / span; }
+  f = Math.max(0.05, Math.min(0.95, f));
+  const cx = w/2, chipY = h - 30*s, top = 16*s, y = top + (chipY - 40*s - top) * (1 - f);
+  g.fillStyle = css('--line'); g.fillRect(cx - 50*s, chipY, 100*s, 14*s);            // chip
+  g.fillStyle = css('--dim'); g.font = `${11*s}px ui-monospace, Menlo, monospace`; g.textAlign = 'center';
+  g.fillText('AS5600', cx, chipY + 26*s);
+  if (zRest) {                                                                         // rest line
+    const yr = top + (chipY - 40*s - top) * (1 - 0.5);
+    g.strokeStyle = css('--warn'); g.setLineDash([5*s, 5*s]); g.lineWidth = s;
+    g.beginPath(); g.moveTo(cx - 80*s, yr + 20*s); g.lineTo(cx + 80*s, yr + 20*s); g.stroke(); g.setLineDash([]);
+  }
+  g.fillStyle = css('--accent'); g.fillRect(cx - 28*s, y, 56*s, 40*s);                // magnet
+  g.fillStyle = css('--bg'); g.fillText('magnet', cx, y + 24*s);
+  els('zMag').textContent = mag.toFixed(1);
+  const n = samples.length;
+  if (n > 6) {
+    const fall = samples[n-6].agc - samples[n-1].agc;
+    els('zRate').textContent = fall;
+    if (fall >= 18 && !cand) cand = {t: samples[n-1].t, agc0: samples[n-6].agc, raw: samples[n-1].raw, deg: samples[n-1].deg};
+  }
+  if (cand && n) {                                   // confirm: still down and not rotating 150 ms later
+    const cur = samples[n-1];
+    if (cur.t - cand.t >= 150) {
+      const still = Math.abs(cur.deg - cand.deg) < 3 && cur.agc <= cand.agc0 - 12;
+      if (still) pressUntil = performance.now() + 600;
+      cand = null;
+    }
+  }
+  const pe = els('zPress'), on = performance.now() < pressUntil;
+  pe.textContent = on ? 'PRESS' : '–'; pe.style.color = css(on ? '--ok' : '--dim');
+  els('zRange').textContent = Math.round(lo) + '–' + Math.round(hi);
+  const d = els('zDelta');
+  if (zRest) { const pc = (mag / zRest - 1) * 100; d.textContent = (pc >= 0 ? '+' : '') + pc.toFixed(1) + '%'; }
+  else d.textContent = '–';
+}
+
+function plot(canvas, series, opts) {
+  const [g, w, h, s] = fit(canvas);
+  g.clearRect(0, 0, w, h);
+  const padL = 52*s, padB = 18*s, padT = 6*s, tNow = samples.length ? samples[samples.length-1].t : 0;
+  g.font = `${11*s}px ui-monospace, Menlo, monospace`; g.textBaseline = 'middle';
+  for (const sr of series) {
+    if (sr.axis !== 'left') continue;
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + (h - padT - padB) * i/4, v = sr.max - (sr.max - sr.min)*i/4;
+      g.strokeStyle = css('--line'); g.lineWidth = s;
+      g.beginPath(); g.moveTo(padL, y); g.lineTo(w, y); g.stroke();
+      g.fillStyle = css('--dim'); g.textAlign = 'right'; g.fillText(Math.round(v), padL - 6*s, y);
+    }
+  }
+  for (const sr of series) {
+    g.strokeStyle = sr.color; g.lineWidth = 2*s; g.beginPath();
+    let first = true;
+    for (const p of samples) {
+      const x = padL + (w - padL) * (1 - (tNow - p.t)/WINDOW_MS);
+      const y = padT + (h - padT - padB) * (1 - (sr.get(p) - sr.min)/(sr.max - sr.min));
+      first ? g.moveTo(x, y) : g.lineTo(x, y); first = false;
+    }
+    g.stroke();
+  }
+  g.fillStyle = css('--accent'); g.textAlign = 'center';
+  for (const m of marks) {
+    const x = padL + (w - padL) * (1 - (tNow - m.t)/WINDOW_MS);
+    if (x < padL) continue;
+    g.strokeStyle = css('--warn'); g.setLineDash([4*s, 4*s]);
+    g.beginPath(); g.moveTo(x, padT); g.lineTo(x, h - padB); g.stroke(); g.setLineDash([]);
+    g.fillStyle = css('--warn'); g.fillText(m.c, x, h - 6*s);
+  }
+}
+
+function frame() {
+  const cur = samples[samples.length - 1];
+  drawDial(cur);
+  drawZ(cur);
+  if (cur) {
+    const rel = cur.deg - zeroOffset;
+    els('rAngle').textContent = (((rel % 360) + 360) % 360).toFixed(1) + '°';
+    els('rTurns').textContent = (rel / 360).toFixed(2) + ' rev';
+    els('rRaw').textContent = cur.raw;
+    els('rAgc').textContent = cur.agc;
+    const back = samples.find(p => cur.t - p.t <= 250);
+    els('rSpeed').textContent = back && cur.t > back.t ? ((cur.deg - back.deg) / ((cur.t - back.t)/1000)).toFixed(0) + ' °/s' : '–';
+    const last = samples.filter(p => cur.t - p.t <= 1000);
+    if (last.length > 5) {
+      const ref = last[0].raw, v = last.map(p => { let d = p.raw - ref; if (d > 2048) d -= 4096; if (d < -2048) d += 4096; return d; });
+      const m = v.reduce((a, b) => a + b, 0) / v.length;
+      els('rNoise').textContent = Math.sqrt(v.reduce((a, b) => a + (b-m)*(b-m), 0) / v.length).toFixed(2);
+    }
+    const md = cur.st & 0x20, ml = cur.st & 0x10, mh = cur.st & 0x08, el = els('magnet');
+    el.textContent = !md ? 'NOT DETECTED' : ml ? 'too weak' : mh ? 'too strong' : 'good';
+    el.style.color = css(!md ? '--bad' : (ml || mh) ? '--warn' : '--ok');
+  }
+  const lo = samples.length ? Math.min(...samples.map(p => p.deg - zeroOffset)) : 0;
+  const hi = samples.length ? Math.max(...samples.map(p => p.deg - zeroOffset)) : 360;
+  const span = Math.max(90, hi - lo), mid = (hi + lo)/2;
+  plot(els('trace'), [{axis:'left', color:css('--accent'), min: mid - span*0.6, max: mid + span*0.6, get: p => p.deg - zeroOffset}]);
+  plot(els('mag'), [
+    {axis:'left', color:css('--accent'), min:0, max:128, get: p => p.agc},
+    {axis:'right', color:css('--dim'), min:0, max:4095, get: p => p.mag},
+  ]);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

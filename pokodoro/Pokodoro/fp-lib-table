@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "Pokodoro_Footprints")(type "KiCad")(uri "${KIPRJMOD}/Pokodoro_Footprints")(options "")(descr ""))
+)

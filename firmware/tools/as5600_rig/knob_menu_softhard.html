@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knob Menu Test</title>
+<style>
+  :root { --bg:#0b0b0c; --panel:#151517; --line:#2a2a2e; --fg:#f2f2f2; --dim:#8a8a90; --accent:#4cc9f0; --ok:#5ee38b; --warn:#ffb454; --bad:#ff6b6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 -apple-system, system-ui, sans-serif; }
+  header { display:flex; gap:10px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  h1 { font-size:15px; margin:0 8px 0 0; font-weight:600; }
+  button { background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.on { border-color:var(--accent); color:var(--accent); }
+  #status { color:var(--dim); margin-left:auto; }
+  main { display:grid; grid-template-columns: 340px 1fr; gap:16px; padding:16px; }
+  @media (max-width:800px) { main { grid-template-columns:1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .label { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+  ul#menu { list-style:none; margin:0; padding:0; }
+  #menu li { padding:14px 16px; border-radius:8px; font-size:18px; border:1px solid transparent; transition:background .08s; }
+  #menu li.sel { background:var(--accent); color:#001018; font-weight:600; }
+  #menu li.flash { background:var(--ok); color:#001018; }
+  #menu li.target:not(.sel) { border-color:var(--warn); }
+  .col { display:flex; flex-direction:column; gap:16px; }
+  #prompt { font-size:22px; min-height:34px; font-weight:600; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px 12px; margin-top:8px; }
+  .stats span { display:block; color:var(--dim); font-size:11px; text-transform:uppercase; }
+  .stats b { font:600 20px ui-monospace, Menlo, monospace; }
+  .tune { display:grid; grid-template-columns:160px 1fr 52px; gap:6px 10px; align-items:center; }
+  .tune input[type=range] { width:100%; }
+  #log { font:12px ui-monospace, Menlo, monospace; color:var(--dim); max-height:170px; overflow:auto; }
+  #log div b { color:var(--fg); font-weight:600; }
+  .pbar { position:relative; height:16px; background:#0e0e10; border:1px solid var(--line); border-radius:8px; margin-top:12px; overflow:hidden; }
+  #pfill { height:100%; width:0; background:var(--accent); transition:width .04s; }
+  .pbar i { position:absolute; top:0; bottom:0; width:2px; }
+  #mSoft { background:var(--warn); } #mHard { background:var(--bad); }
+  .plabel { display:flex; justify-content:space-between; color:var(--dim); font-size:11px; text-transform:uppercase; margin-top:4px; }
+  #preview { min-height:0; margin-top:8px; padding:0; border-radius:8px; background:#1d2a31; color:#cfeefa; font-size:15px; overflow:hidden; max-height:0; transition:max-height .12s, padding .12s; }
+  #preview.show { max-height:90px; padding:10px 12px; }
+  .hint { color:var(--dim); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Knob menu test</h1>
+  <button id="connect">Connect</button>
+  <button class="mode on" data-mode="free">Free menu</button>
+  <button class="mode" data-mode="task">Menu task</button>
+  <button class="mode" data-mode="force">Soft / hard</button>
+  <button class="mode" data-mode="levels">Soft / hard drill</button>
+  <button class="mode" data-mode="press">Press drill</button>
+  <button class="mode" data-mode="turn">Turn drill</button>
+  <label><input type="checkbox" id="sound" checked> sound</label>
+  <span id="status">Not connected (arrow keys and Space also work)</span>
+</header>
+<main>
+  <div class="panel"><div class="label">Menu</div><ul id="menu"></ul></div>
+  <div class="col">
+    <div class="panel">
+      <div class="label" id="modeName">Free menu</div>
+      <div id="prompt">Turn to move, press to select.</div>
+      <div id="preview"></div>
+      <div class="pbar"><div id="pfill"></div><i id="mSoft"></i><i id="mHard"></i></div>
+      <div class="plabel"><span>press depth (drop below rest)</span><b id="pnum">0</b></div>
+      <div class="stats" id="stats"></div>
+      <div class="hint" id="modeHint"></div>
+    </div>
+    <div class="panel">
+      <div class="label">Tuning</div>
+      <div class="tune">
+        <span>Degrees per step</span><input type="range" id="stepDeg" min="5" max="45" step="1" value="15"><b id="stepDegV"></b>
+        <span>Soft press: drop below rest</span><input type="range" id="soft" min="8" max="45" step="1" value="24"><b id="softV"></b>
+        <span>Hard press: drop below rest</span><input type="range" id="hard" min="16" max="60" step="1" value="34"><b id="hardV"></b>
+        <span>Press: hold time (ms)</span><input type="range" id="dwell" min="50" max="400" step="10" value="120"><b id="dwellV"></b>
+        <span>Clockwise goes</span><button id="dir">down the list</button><span></span>
+        <span>Calibrate</span><button id="cal">Light, then hard</button><span></span>
+      </div>
+    </div>
+    <div class="panel"><div class="label">Events</div><div id="log"></div></div>
+  </div>
+</main>
+<script>
+const ITEMS = ['Music', 'Timer', 'Gym', 'Voice memos', 'Settings', 'Brightness', 'Haptics', 'About'];
+const $ = id => document.getElementById(id);
+const cfg = {stepDeg:15, soft:24, hard:34, dwell:120, cwDown:true};
+let mode = 'free', idx = 0, port = null;
+
+// ---------- menu ----------
+const menu = $('menu');
+ITEMS.forEach((n, i) => { const li = document.createElement('li'); li.textContent = n; menu.appendChild(li); });
+function render() {
+  [...menu.children].forEach((li, i) => {
+    li.classList.toggle('sel', i === idx);
+    li.classList.toggle('target', task.on && i === task.target);
+  });
+}
+
+// ---------- sound ----------
+let actx = null;
+function beep(freq, ms, vol) {
+  if (!$('sound').checked) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = freq; g.gain.value = vol;
+    o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + ms / 1000);
+  } catch (e) {}
+}
+
+// ---------- log + stats ----------
+const logEl = $('log');
+function log(html) {
+  const d = document.createElement('div'); d.innerHTML = html; logEl.prepend(d);
+  while (logEl.children.length > 40) logEl.lastChild.remove();
+}
+const task = {on:false, target:0, t0:0, ok:0, wrong:0, times:[]};
+const pd = {on:false, waiting:false, tPrompt:0, trials:0, hits:0, misses:0, falses:0, lat:[], timer:null};
+const lv = {on:false, waiting:false, want:'', trials:0, ok:0, wrongLevel:0, misses:0, timer:null};
+const td = {on:false, until:0, steps:0, falses:0, timer:null};
+function stat(label, val) { return `<div><span>${label}</span><b>${val}</b></div>`; }
+function showStats() {
+  const mean = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) + ' ms' : '–';
+  let h = '';
+  if (mode === 'task') {
+    const n = task.ok + task.wrong;
+    h = stat('Correct', task.ok) + stat('Wrong item', task.wrong) + stat('Mean time', mean(task.times)) + stat('Accuracy', n ? Math.round(100 * task.ok / n) + '%' : '–');
+  } else if (mode === 'press') {
+    h = stat('Trials', pd.trials) + stat('Detected', pd.hits) + stat('Missed', pd.misses) + stat('False presses', pd.falses) + stat('Mean latency', mean(pd.lat)) + stat('Hit rate', pd.trials ? Math.round(100 * pd.hits / pd.trials) + '%' : '–');
+  } else if (mode === 'levels') {
+    h = stat('Trials', lv.trials) + stat('Right level', lv.ok) + stat('Wrong level', lv.wrongLevel) + stat('Missed', lv.misses);
+  } else if (mode === 'turn') {
+    h = stat('Steps turned', td.steps) + stat('False presses', td.falses) + stat('Time left', td.on ? Math.max(0, Math.ceil((td.until - performance.now()) / 1000)) + ' s' : '–');
+  }
+  $('stats').innerHTML = h;
+}
+
+// ---------- events from input ----------
+function onStep(dir) {            // dir +1 = next item down
+  const d = cfg.cwDown ? dir : -dir;
+  idx = Math.max(0, Math.min(ITEMS.length - 1, idx + d));
+  render(); beep(1200, 18, 0.05);
+  if (mode === 'turn' && td.on) td.steps++;
+  showStats();
+}
+function onSelect(src) {
+  beep(520, 70, 0.12);
+  const li = menu.children[idx]; li.classList.add('flash'); setTimeout(() => li.classList.remove('flash'), 220);
+  log(`<b>SELECT</b> ${ITEMS[idx]} <span>(${src})</span>`);
+  if (mode === 'free') $('prompt').textContent = 'Selected: ' + ITEMS[idx];
+  else if (mode === 'task' && task.on) {
+    const ms = Math.round(performance.now() - task.t0);
+    if (idx === task.target) { task.ok++; task.times.push(ms); log(`✓ correct in ${ms} ms`); }
+    else { task.wrong++; log(`✗ wanted ${ITEMS[task.target]}, got ${ITEMS[idx]}`); }
+    nextTask();
+  } else if (mode === 'press' && pd.on) {
+    if (pd.waiting) { pd.waiting = false; pd.hits++; pd.lat.push(Math.round(performance.now() - pd.tPrompt)); log('✓ press detected'); schedulePress(); }
+    else { pd.falses++; log('✗ press when none was asked for'); }
+  } else if (mode === 'turn' && td.on) { td.falses++; log('✗ false press while turning'); }
+  showStats();
+}
+
+// ---------- tuning UI ----------
+function bind(id, key) {
+  const el = $(id), v = $(id + 'V');
+  const upd = () => { cfg[key] = Number(el.value); v.textContent = el.value; };
+  el.addEventListener('input', upd); upd();
+}
+bind('stepDeg', 'stepDeg'); bind('soft', 'soft'); bind('hard', 'hard'); bind('dwell', 'dwell');
+function markers() { $('mSoft').style.left = (100 * cfg.soft / 60) + '%'; $('mHard').style.left = (100 * cfg.hard / 60) + '%'; }
+['soft', 'hard'].forEach(k => $(k).addEventListener('input', markers)); markers();
+$('dir').onclick = () => { cfg.cwDown = !cfg.cwDown; $('dir').textContent = cfg.cwDown ? 'down the list' : 'up the list'; };
+
+// ---------- sensor processing ----------
+let hist = [], lastRaw = null, unwrapped = 0, anchor = null;
+let cand = null, armed = true, armBase = 0;
+function sample(t, raw, agc) {
+  if (lastRaw !== null) { let d = raw - lastRaw; if (d > 2048) d -= 4096; else if (d < -2048) d += 4096; unwrapped += d * 360 / 4096; }
+  lastRaw = raw;
+  if (anchor === null) anchor = unwrapped;
+  hist.push({t, agc, deg: unwrapped}); if (hist.length > 40) hist.shift();
+  // turning: one step per cfg.stepDeg
+  while (unwrapped - anchor >= cfg.stepDeg) { anchor += cfg.stepDeg; onStep(+1); }
+  while (unwrapped - anchor <= -cfg.stepDeg) { anchor -= cfg.stepDeg; onStep(-1); }
+  // pressing: depth = drop below the 3 s resting peak. Needs a still knob; rotating cancels until fully released.
+  const n = hist.length, cur = hist[n - 1];
+  let base = 0; for (let i = Math.max(0, n - 300); i < n; i++) base = Math.max(base, hist[i].agc);
+  const drop = base - cur.agc;
+  if (rec) rec.push(drop);
+  $('pfill').style.width = Math.max(0, Math.min(100, 100 * drop / 60)) + '%'; $('pnum').textContent = Math.max(0, drop);
+  if (n > 30) detect(cur, drop);
+}
+let ps = {st:'idle', t0:0, deg0:0, hardT:0, sel:false}, rec = null;
+function detect(cur, drop) {
+  const rot = Math.abs(cur.deg - ps.deg0), low = cfg.soft * 0.6;
+  const toHard = () => { ps.hardT = ps.hardT || cur.t; if (cur.t - ps.hardT >= 50) { ps.st = 'hard'; emit('hard'); } };
+  if (ps.st === 'idle') { ps.sel = false; if (drop >= cfg.soft) ps = {st:'cand', t0:cur.t, deg0:cur.deg, hardT:0, sel:false}; }
+  else if (ps.st === 'cand') {
+    if (rot >= 4 || drop < cfg.soft * 0.7) ps.st = 'blocked';
+    else {
+      if (drop >= cfg.hard) toHard(); else ps.hardT = 0;
+      if (ps.st === 'cand' && cur.t - ps.t0 >= cfg.dwell) { ps.st = 'soft'; ps.hardT = 0; emit('soft'); }
+    }
+  } else if (ps.st === 'soft') {
+    if (rot >= 4) { emit('release'); ps.st = 'blocked'; }
+    else if (drop >= cfg.hard) toHard();
+    else { ps.hardT = 0; if (drop < low) { emit('release'); ps.st = 'idle'; } }
+  } else if (ps.st === 'hard') { if (drop < low) ps.st = 'idle'; }
+  else if (ps.st === 'blocked') { if (drop < low) ps.st = 'idle'; }
+}
+const TWO_LEVEL = () => mode === 'force' || mode === 'levels';
+const BLURB = {Music:'3 playlists · now playing: nothing', Timer:'Pomodoro 25 / 5 · idle', Gym:'Push day · 5 exercises', 'Voice memos':'12 memos · last 2 h ago', Settings:'Haptics, brightness, ring direction', Brightness:'70%', Haptics:'Strong', About:'Device 0.1.2'};
+function emit(kind) {
+  if (!TWO_LEVEL()) { if (kind !== 'release' && !ps.sel) { ps.sel = true; onSelect('knob'); } return; }
+  if (mode === 'force') {
+    if (kind === 'soft') { $('preview').textContent = 'Preview — ' + ITEMS[idx] + ': ' + BLURB[ITEMS[idx]]; $('preview').classList.add('show'); beep(560, 35, 0.1); log('<b>soft</b> ' + ITEMS[idx]); }
+    else if (kind === 'hard') { $('preview').classList.remove('show'); onSelect('hard press'); }
+    else if (kind === 'release') $('preview').classList.remove('show');
+  } else if (mode === 'levels' && lv.waiting) {
+    if (kind === 'hard') resolveLevel('hard'); else if (kind === 'release') resolveLevel('soft');
+  }
+}
+function parse(line) {
+  line = line.trim(); if (!line || line[0] === '#') return;
+  const p = line.split(',').map(Number);
+  if (p.length === 5 && !p.some(isNaN)) sample(p[0], p[1], p[2]);
+}
+async function connect() {
+  if (!('serial' in navigator)) { $('status').textContent = 'Web Serial needs Chrome or Edge'; return; }
+  try { port = await navigator.serial.requestPort(); await port.open({baudRate:115200}); }
+  catch (e) { $('status').textContent = 'Could not open: ' + e.message; return; }
+  $('status').textContent = 'Connected'; $('connect').textContent = 'Connected';
+  beep(800, 40, 0.05);
+  const dec = new TextDecoderStream(); port.readable.pipeTo(dec.writable).catch(() => {});
+  const rd = dec.readable.getReader(); let buf = '';
+  try { for (;;) { const {value, done} = await rd.read(); if (done) break; buf += value; let i; while ((i = buf.indexOf('\n')) >= 0) { parse(buf.slice(0, i)); buf = buf.slice(i + 1); } } } catch (e) {}
+  $('status').textContent = 'Disconnected'; $('connect').textContent = 'Connect';
+}
+$('connect').onclick = connect;
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); onStep(+1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); onStep(-1); }
+  else if (e.key === ' ' && !e.repeat) { e.preventDefault(); onSelect('key'); }
+});
+
+// ---------- modes ----------
+function stopAll() { task.on = pd.on = td.on = lv.on = lv.waiting = false; clearTimeout(lv.timer); $('preview').classList.remove('show'); pd.waiting = false; clearTimeout(pd.timer); clearInterval(td.timer); }
+function nextTask() {
+  let t; do { t = Math.floor(Math.random() * ITEMS.length); } while (t === task.target || t === idx);
+  task.target = t; task.t0 = performance.now(); $('prompt').textContent = 'Select: ' + ITEMS[t]; render();
+}
+function schedulePress() {
+  if (pd.trials >= 10) { pd.on = false; $('prompt').textContent = 'Done — ' + pd.hits + ' of 10 detected, ' + pd.falses + ' false'; showStats(); return; }
+  $('prompt').textContent = 'Wait…';
+  pd.timer = setTimeout(() => {
+    pd.trials++; pd.waiting = true; pd.tPrompt = performance.now(); $('prompt').textContent = 'PRESS NOW'; beep(900, 120, 0.1); showStats();
+    pd.timer = setTimeout(() => { if (pd.waiting) { pd.waiting = false; pd.misses++; log('✗ missed press'); showStats(); schedulePress(); } }, 2000);
+  }, 1500 + Math.random() * 2500);
+}
+function nextLevel() {
+  if (lv.trials >= 10) { lv.on = false; lv.waiting = false; $('prompt').textContent = `Done — ${lv.ok} of 10 right level, ${lv.wrongLevel} wrong, ${lv.misses} missed`; showStats(); return; }
+  $('prompt').textContent = 'Wait…';
+  lv.timer = setTimeout(() => {
+    lv.trials++; lv.want = Math.random() < 0.5 ? 'soft' : 'hard'; lv.waiting = true;
+    $('prompt').textContent = lv.want === 'soft' ? 'LIGHT press' : 'HARD press'; beep(900, 100, 0.1); showStats();
+    lv.timer = setTimeout(() => { if (lv.waiting) { lv.waiting = false; lv.misses++; log('✗ no press'); showStats(); nextLevel(); } }, 3000);
+  }, 1200 + Math.random() * 2000);
+}
+function resolveLevel(got) {
+  lv.waiting = false; clearTimeout(lv.timer);
+  if (got === lv.want) { lv.ok++; log(`✓ ${got} press`); } else { lv.wrongLevel++; log(`✗ wanted ${lv.want}, got ${got}`); }
+  showStats(); setTimeout(nextLevel, 400);
+}
+async function calibrate() {
+  stopAll(); setModeLabelsOnly();
+  const run = async (txt, ms) => { $('prompt').textContent = txt; rec = []; await new Promise(r => setTimeout(r, ms)); const r = rec; rec = null; return r; };
+  const p90 = a => { const v = a.filter(x => x > 8).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length * 0.9)] : 0; };
+  await run('Get ready…', 1500);
+  const L = p90(await run('LIGHT presses: press lightly, hold ~1 s, release, repeat (8 s)', 8000));
+  await run('Rest…', 1500);
+  const H = p90(await run('HARD presses: press firmly, hold ~1 s, release, repeat (8 s)', 8000));
+  if (L < 8 || H < 8) { $('prompt').textContent = `Couldn’t see presses (light ${L}, hard ${H}). Is the knob connected?`; return; }
+  cfg.soft = Math.max(10, Math.round(L * 0.75));
+  cfg.hard = Math.max(cfg.soft + 6, Math.round((L + H) / 2));
+  $('soft').value = cfg.soft; $('hard').value = cfg.hard; $('softV').textContent = cfg.soft; $('hardV').textContent = cfg.hard; markers();
+  $('prompt').textContent = `Calibrated — light ≈ ${L}, hard ≈ ${H}. Soft line ${cfg.soft}, hard line ${cfg.hard}.`;
+  log(`<b>calibrated</b> light ${L}, hard ${H} → soft ${cfg.soft}, hard ${cfg.hard}`);
+}
+function setModeLabelsOnly() { document.querySelectorAll('.mode').forEach(b => b.classList.remove('on')); $('modeName').textContent = 'Calibration'; $('modeHint').textContent = ''; }
+$('cal').onclick = calibrate;
+function setMode(m) {
+  stopAll(); mode = m;
+  document.querySelectorAll('.mode').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $('modeName').textContent = {free:'Free menu', task:'Menu task', force:'Soft / hard press', levels:'Soft / hard drill', press:'Press drill', turn:'Turn drill'}[m];
+  $('modeHint').textContent = {
+    free:'Move through the list and select. Adjust the tuning to taste.',
+    task:'A target is outlined in orange. Go to it and select. Wrong selections count against accuracy.',
+    force:'Press lightly to preview the highlighted item (it shows below); press harder to select it. Letting go after a light press just dismisses the preview.',
+    levels:'10 trials. It says LIGHT or HARD: press that firmly. Light = release before reaching the red line; hard = cross it.',
+    press:'10 trials. Hold still, and press when it says PRESS NOW. Presses at other times count as false.',
+    turn:'Turn the knob freely for 15 s without clicking. Any press that registers is a false press.'}[m];
+  if (m === 'task') { Object.assign(task, {on:true, ok:0, wrong:0, times:[]}); task.target = -1; nextTask(); }
+  else if (m === 'levels') { Object.assign(lv, {on:true, trials:0, ok:0, wrongLevel:0, misses:0}); nextLevel(); }
+  else if (m === 'press') { Object.assign(pd, {on:true, trials:0, hits:0, misses:0, falses:0, lat:[]}); schedulePress(); }
+  else if (m === 'turn') {
+    Object.assign(td, {on:true, steps:0, falses:0, until:performance.now() + 15000}); $('prompt').textContent = 'Turn freely — don’t click';
+    td.timer = setInterval(() => { showStats(); if (performance.now() >= td.until) { td.on = false; clearInterval(td.timer); $('prompt').textContent = `Done — ${td.steps} steps, ${td.falses} false press${td.falses === 1 ? '' : 'es'}`; showStats(); } }, 250);
+  } else $('prompt').textContent = 'Turn to move, press to select.';
+  render(); showStats();
+}
+document.querySelectorAll('.mode').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+render(); showStats();
+</script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knob Menu Test</title>
+<style>
+  :root { --bg:#0b0b0c; --panel:#151517; --line:#2a2a2e; --fg:#f2f2f2; --dim:#8a8a90; --accent:#4cc9f0; --ok:#5ee38b; --warn:#ffb454; --bad:#ff6b6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 -apple-system, system-ui, sans-serif; }
+  header { display:flex; gap:10px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  h1 { font-size:15px; margin:0 8px 0 0; font-weight:600; }
+  button { background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.on { border-color:var(--accent); color:var(--accent); }
+  #status { color:var(--dim); margin-left:auto; }
+  main { display:grid; grid-template-columns: 340px 1fr; gap:16px; padding:16px; }
+  @media (max-width:800px) { main { grid-template-columns:1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .label { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+  ul#menu { list-style:none; margin:0; padding:0; }
+  #menu li { padding:14px 16px; border-radius:8px; font-size:18px; border:1px solid transparent; transition:background .08s; }
+  #menu li.sel { background:var(--accent); color:#001018; font-weight:600; }
+  #menu li.flash { background:var(--ok); color:#001018; }
+  #menu li.target:not(.sel) { border-color:var(--warn); }
+  .col { display:flex; flex-direction:column; gap:16px; }
+  #prompt { font-size:22px; min-height:34px; font-weight:600; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px 12px; margin-top:8px; }
+  .stats span { display:block; color:var(--dim); font-size:11px; text-transform:uppercase; }
+  .stats b { font:600 20px ui-monospace, Menlo, monospace; }
+  .tune { display:grid; grid-template-columns:160px 1fr 52px; gap:6px 10px; align-items:center; }
+  .tune input[type=range] { width:100%; }
+  #log { font:12px ui-monospace, Menlo, monospace; color:var(--dim); max-height:170px; overflow:auto; }
+  #log div b { color:var(--fg); font-weight:600; }
+  .hint { color:var(--dim); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Knob menu test</h1>
+  <button id="connect">Connect</button>
+  <button class="mode on" data-mode="free">Free menu</button>
+  <button class="mode" data-mode="task">Menu task</button>
+  <button class="mode" data-mode="press">Press drill</button>
+  <button class="mode" data-mode="turn">Turn drill</button>
+  <label><input type="checkbox" id="sound" checked> sound</label>
+  <span id="status">Not connected (arrow keys and Space also work)</span>
+</header>
+<main>
+  <div class="panel"><div class="label">Menu</div><ul id="menu"></ul></div>
+  <div class="col">
+    <div class="panel">
+      <div class="label" id="modeName">Free menu</div>
+      <div id="prompt">Turn to move, press to select.</div>
+      <div class="stats" id="stats"></div>
+      <div class="hint" id="modeHint"></div>
+    </div>
+    <div class="panel">
+      <div class="label">Tuning</div>
+      <div class="tune">
+        <span>Degrees per step</span><input type="range" id="stepDeg" min="5" max="45" step="1" value="15"><b id="stepDegV"></b>
+        <span>Press: drop below rest</span><input type="range" id="fallThr" min="10" max="50" step="1" value="25"><b id="fallThrV"></b>
+        <span>Press: hold time (ms)</span><input type="range" id="dwell" min="50" max="400" step="10" value="150"><b id="dwellV"></b>
+        <span>Clockwise goes</span><button id="dir">down the list</button><span></span>
+      </div>
+    </div>
+    <div class="panel"><div class="label">Events</div><div id="log"></div></div>
+  </div>
+</main>
+<script>
+const ITEMS = ['Music', 'Timer', 'Gym', 'Voice memos', 'Settings', 'Brightness', 'Haptics', 'About'];
+const $ = id => document.getElementById(id);
+const cfg = {stepDeg:15, fallThr:25, dwell:150, cwDown:true};
+let mode = 'free', idx = 0, port = null;
+
+// ---------- menu ----------
+const menu = $('menu');
+ITEMS.forEach((n, i) => { const li = document.createElement('li'); li.textContent = n; menu.appendChild(li); });
+function render() {
+  [...menu.children].forEach((li, i) => {
+    li.classList.toggle('sel', i === idx);
+    li.classList.toggle('target', task.on && i === task.target);
+  });
+}
+
+// ---------- sound ----------
+let actx = null;
+function beep(freq, ms, vol) {
+  if (!$('sound').checked) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = freq; g.gain.value = vol;
+    o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + ms / 1000);
+  } catch (e) {}
+}
+
+// ---------- log + stats ----------
+const logEl = $('log');
+function log(html) {
+  const d = document.createElement('div'); d.innerHTML = html; logEl.prepend(d);
+  while (logEl.children.length > 40) logEl.lastChild.remove();
+}
+const task = {on:false, target:0, t0:0, ok:0, wrong:0, times:[]};
+const pd = {on:false, waiting:false, tPrompt:0, trials:0, hits:0, misses:0, falses:0, lat:[], timer:null};
+const td = {on:false, until:0, steps:0, falses:0, timer:null};
+function stat(label, val) { return `<div><span>${label}</span><b>${val}</b></div>`; }
+function showStats() {
+  const mean = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) + ' ms' : '–';
+  let h = '';
+  if (mode === 'task') {
+    const n = task.ok + task.wrong;
+    h = stat('Correct', task.ok) + stat('Wrong item', task.wrong) + stat('Mean time', mean(task.times)) + stat('Accuracy', n ? Math.round(100 * task.ok / n) + '%' : '–');
+  } else if (mode === 'press') {
+    h = stat('Trials', pd.trials) + stat('Detected', pd.hits) + stat('Missed', pd.misses) + stat('False presses', pd.falses) + stat('Mean latency', mean(pd.lat)) + stat('Hit rate', pd.trials ? Math.round(100 * pd.hits / pd.trials) + '%' : '–');
+  } else if (mode === 'turn') {
+    h = stat('Steps turned', td.steps) + stat('False presses', td.falses) + stat('Time left', td.on ? Math.max(0, Math.ceil((td.until - performance.now()) / 1000)) + ' s' : '–');
+  }
+  $('stats').innerHTML = h;
+}
+
+// ---------- events from input ----------
+function onStep(dir) {            // dir +1 = next item down
+  const d = cfg.cwDown ? dir : -dir;
+  idx = Math.max(0, Math.min(ITEMS.length - 1, idx + d));
+  render(); beep(1200, 18, 0.05);
+  if (mode === 'turn' && td.on) td.steps++;
+  showStats();
+}
+function onSelect(src) {
+  beep(520, 70, 0.12);
+  const li = menu.children[idx]; li.classList.add('flash'); setTimeout(() => li.classList.remove('flash'), 220);
+  log(`<b>SELECT</b> ${ITEMS[idx]} <span>(${src})</span>`);
+  if (mode === 'free') $('prompt').textContent = 'Selected: ' + ITEMS[idx];
+  else if (mode === 'task' && task.on) {
+    const ms = Math.round(performance.now() - task.t0);
+    if (idx === task.target) { task.ok++; task.times.push(ms); log(`✓ correct in ${ms} ms`); }
+    else { task.wrong++; log(`✗ wanted ${ITEMS[task.target]}, got ${ITEMS[idx]}`); }
+    nextTask();
+  } else if (mode === 'press' && pd.on) {
+    if (pd.waiting) { pd.waiting = false; pd.hits++; pd.lat.push(Math.round(performance.now() - pd.tPrompt)); log('✓ press detected'); schedulePress(); }
+    else { pd.falses++; log('✗ press when none was asked for'); }
+  } else if (mode === 'turn' && td.on) { td.falses++; log('✗ false press while turning'); }
+  showStats();
+}
+
+// ---------- tuning UI ----------
+function bind(id, key) {
+  const el = $(id), v = $(id + 'V');
+  const upd = () => { cfg[key] = Number(el.value); v.textContent = el.value; };
+  el.addEventListener('input', upd); upd();
+}
+bind('stepDeg', 'stepDeg'); bind('fallThr', 'fallThr'); bind('dwell', 'dwell');
+$('dir').onclick = () => { cfg.cwDown = !cfg.cwDown; $('dir').textContent = cfg.cwDown ? 'down the list' : 'up the list'; };
+
+// ---------- sensor processing ----------
+let hist = [], lastRaw = null, unwrapped = 0, anchor = null;
+let cand = null, armed = true, armBase = 0;
+function sample(t, raw, agc) {
+  if (lastRaw !== null) { let d = raw - lastRaw; if (d > 2048) d -= 4096; else if (d < -2048) d += 4096; unwrapped += d * 360 / 4096; }
+  lastRaw = raw;
+  if (anchor === null) anchor = unwrapped;
+  hist.push({t, agc, deg: unwrapped}); if (hist.length > 40) hist.shift();
+  // turning: one step per cfg.stepDeg
+  while (unwrapped - anchor >= cfg.stepDeg) { anchor += cfg.stepDeg; onStep(+1); }
+  while (unwrapped - anchor <= -cfg.stepDeg) { anchor -= cfg.stepDeg; onStep(-1); }
+  // pressing: AGC drops cfg.fallThr below its recent resting level (3 s peak), then the knob stays still and held for cfg.dwell ms
+  const n = hist.length;
+  const cur = hist[n - 1];
+  let base = 0; for (let i = Math.max(0, n - 300); i < n; i++) base = Math.max(base, hist[i].agc);
+  const drop = base - cur.agc;
+  if (!armed && cur.agc >= armBase + cfg.fallThr * 0.5) armed = true;       // released: AGC climbed back off the pressed level
+  if (armed && !cand && drop >= cfg.fallThr && n > 30) cand = {t:cur.t, deg:cur.deg, drop};
+  if (cand) {
+    if (Math.abs(cur.deg - cand.deg) >= 4 || drop < cfg.fallThr * 0.7) cand = null;          // it rotated, or let go: not a click
+    else if (cur.t - cand.t >= cfg.dwell) { armed = false; armBase = cur.agc; cand = null; onSelect('knob'); }
+  }
+}
+function parse(line) {
+  line = line.trim(); if (!line || line[0] === '#') return;
+  const p = line.split(',').map(Number);
+  if (p.length === 5 && !p.some(isNaN)) sample(p[0], p[1], p[2]);
+}
+async function connect() {
+  if (!('serial' in navigator)) { $('status').textContent = 'Web Serial needs Chrome or Edge'; return; }
+  try { port = await navigator.serial.requestPort(); await port.open({baudRate:115200}); }
+  catch (e) { $('status').textContent = 'Could not open: ' + e.message; return; }
+  $('status').textContent = 'Connected'; $('connect').textContent = 'Connected';
+  beep(800, 40, 0.05);
+  const dec = new TextDecoderStream(); port.readable.pipeTo(dec.writable).catch(() => {});
+  const rd = dec.readable.getReader(); let buf = '';
+  try { for (;;) { const {value, done} = await rd.read(); if (done) break; buf += value; let i; while ((i = buf.indexOf('\n')) >= 0) { parse(buf.slice(0, i)); buf = buf.slice(i + 1); } } } catch (e) {}
+  $('status').textContent = 'Disconnected'; $('connect').textContent = 'Connect';
+}
+$('connect').onclick = connect;
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); onStep(+1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); onStep(-1); }
+  else if (e.key === ' ' && !e.repeat) { e.preventDefault(); onSelect('key'); }
+});
+
+// ---------- modes ----------
+function stopAll() { task.on = pd.on = td.on = false; pd.waiting = false; clearTimeout(pd.timer); clearInterval(td.timer); }
+function nextTask() {
+  let t; do { t = Math.floor(Math.random() * ITEMS.length); } while (t === task.target || t === idx);
+  task.target = t; task.t0 = performance.now(); $('prompt').textContent = 'Select: ' + ITEMS[t]; render();
+}
+function schedulePress() {
+  if (pd.trials >= 10) { pd.on = false; $('prompt').textContent = 'Done — ' + pd.hits + ' of 10 detected, ' + pd.falses + ' false'; showStats(); return; }
+  $('prompt').textContent = 'Wait…';
+  pd.timer = setTimeout(() => {
+    pd.trials++; pd.waiting = true; pd.tPrompt = performance.now(); $('prompt').textContent = 'PRESS NOW'; beep(900, 120, 0.1); showStats();
+    pd.timer = setTimeout(() => { if (pd.waiting) { pd.waiting = false; pd.misses++; log('✗ missed press'); showStats(); schedulePress(); } }, 2000);
+  }, 1500 + Math.random() * 2500);
+}
+function setMode(m) {
+  stopAll(); mode = m;
+  document.querySelectorAll('.mode').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $('modeName').textContent = {free:'Free menu', task:'Menu task', press:'Press drill', turn:'Turn drill'}[m];
+  $('modeHint').textContent = {
+    free:'Move through the list and select. Adjust the tuning to taste.',
+    task:'A target is outlined in orange. Go to it and select. Wrong selections count against accuracy.',
+    press:'10 trials. Hold still, and press when it says PRESS NOW. Presses at other times count as false.',
+    turn:'Turn the knob freely for 15 s without clicking. Any press that registers is a false press.'}[m];
+  if (m === 'task') { Object.assign(task, {on:true, ok:0, wrong:0, times:[]}); task.target = -1; nextTask(); }
+  else if (m === 'press') { Object.assign(pd, {on:true, trials:0, hits:0, misses:0, falses:0, lat:[]}); schedulePress(); }
+  else if (m === 'turn') {
+    Object.assign(td, {on:true, steps:0, falses:0, until:performance.now() + 15000}); $('prompt').textContent = 'Turn freely — don’t click';
+    td.timer = setInterval(() => { showStats(); if (performance.now() >= td.until) { td.on = false; clearInterval(td.timer); $('prompt').textContent = `Done — ${td.steps} steps, ${td.falses} false press${td.falses === 1 ? '' : 'es'}`; showStats(); } }, 250);
+  } else $('prompt').textContent = 'Turn to move, press to select.';
+  render(); showStats();
+}
+document.querySelectorAll('.mode').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+render(); showStats();
+</script>
+</body>
+</html>

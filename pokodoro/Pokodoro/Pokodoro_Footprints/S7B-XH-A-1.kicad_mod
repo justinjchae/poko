@@ -1,0 +1,227 @@
+(footprint "S7B-XH-A-1"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(descr "S7B-XH-A(LF)(SN)")
+	(tags "Connector")
+	(property "Reference" "J**"
+		(at 0 0 0)
+		(layer "F.SilkS")
+		(uuid "fae32fa7-4d96-420b-af35-a81dfb026a34")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Value" "S7B-XH-A-1"
+		(at 0 0 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "59370b45-b14b-454b-bdfa-529a47d76cf0")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Footprint" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "db54f51f-4dfc-4036-a97a-a0fc51620d4c")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "4d5fe8bc-20ee-49e3-997c-a1a2417405cc")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "d8cd03ba-d9bf-4588-9b9b-2cb97a563bde")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole exclude_from_pos_files)
+	(fp_rect
+		(start -2.45 -9.2)
+		(end 17.45 2.3)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(fill none)
+		(layer "F.SilkS")
+		(uuid "5e2fe7cc-fa09-4f5c-847d-47d199c88b66")
+	)
+	(fp_line
+		(start -2.7 -9.45)
+		(end -2.7 2.55)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "Dwgs.User")
+		(uuid "964b9a1e-da42-413b-aafd-4df8b2e81048")
+	)
+	(fp_line
+		(start -2.7 2.55)
+		(end 17.7 2.55)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "Dwgs.User")
+		(uuid "ca0d5f18-6a6a-419a-a1e3-6b64e821fa51")
+	)
+	(fp_line
+		(start -2.45 -9.2)
+		(end 17.45 -9.2)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Dwgs.User")
+		(uuid "1b7e359b-c13b-4eff-aad6-5a977c758e12")
+	)
+	(fp_line
+		(start -2.45 2.3)
+		(end -2.45 -9.2)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Dwgs.User")
+		(uuid "c77cc896-105b-47da-b360-c7ac0e98aacc")
+	)
+	(fp_line
+		(start 17.45 -9.2)
+		(end 17.45 2.3)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Dwgs.User")
+		(uuid "3468d893-8114-4a88-8193-35288de21346")
+	)
+	(fp_line
+		(start 17.45 2.3)
+		(end -2.45 2.3)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Dwgs.User")
+		(uuid "fc0ed4b8-2a25-4808-9d0e-ca7f36734fe7")
+	)
+	(fp_line
+		(start 17.7 -9.45)
+		(end -2.7 -9.45)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "Dwgs.User")
+		(uuid "12f2ca32-4e12-4b52-af39-8b266be207ee")
+	)
+	(fp_line
+		(start 17.7 2.55)
+		(end 17.7 -9.45)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "Dwgs.User")
+		(uuid "440c2e8a-314c-464c-86dc-3e20f605ec9f")
+	)
+	(pad "1" thru_hole rect
+		(at 0 0 90)
+		(size 1.65 1.65)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask" "F.SilkS")
+		(remove_unused_layers no)
+		(thermal_bridge_angle 45)
+		(uuid "6d0f4a62-ccdb-43d4-9d26-91dadbe27e10")
+	)
+	(pad "2" thru_hole circle
+		(at 2.5 0 90)
+		(size 1.65 1.65)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask" "F.SilkS")
+		(remove_unused_layers no)
+		(uuid "d3a0c248-f25f-4c14-a242-76a95ff123ec")
+	)
+	(pad "3" thru_hole circle
+		(at 5 0 90)
+		(size 1.65 1.65)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask" "F.SilkS")
+		(remove_unused_layers no)
+		(uuid "5446ab42-6355-4ac8-8166-31c034f8204b")
+	)
+	(pad "4" thru_hole circle
+		(at 7.5 0 90)
+		(size 1.65 1.65)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask" "F.SilkS")
+		(remove_unused_layers no)
+		(uuid "0a7fbc69-f438-41d0-b674-352957d3c29c")
+	)
+	(pad "5" thru_hole circle
+		(at 10 0 90)
+		(size 1.65 1.65)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask" "F.SilkS")
+		(remove_unused_layers no)
+		(uuid "644d6fbc-da3c-41ea-95b3-db0727e71132")
+	)
+	(pad "6" thru_hole circle
+		(at 12.5 0 90)
+		(size 1.65 1.65)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask" "F.SilkS")
+		(remove_unused_layers no)
+		(uuid "61ce1c74-9d11-4632-a73c-dd474a1eca8d")
+	)
+	(pad "7" thru_hole circle
+		(at 15 0 90)
+		(size 1.65 1.65)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask" "F.SilkS")
+		(remove_unused_layers no)
+		(uuid "87b3308c-3472-44a6-ac10-47bc7709c8e6")
+	)
+	(model "${KIPRJMOD}/Pokodoro_3DModels/S7B-XH-A-1.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)
