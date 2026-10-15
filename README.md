@@ -13,9 +13,9 @@ It snaps onto the back of the phone like a MagSafe accessory, or comes off and s
 
 <img src="docs/images/poko-front.jpg" width="210" alt="Poko prototype in hand, home screen on Voice Memos">
 &nbsp;
-<img src="docs/images/poko-demo.gif" width="420" alt="Breadboard prototype: turning the wheel through Pomodoro, the work timer, the break timer and a voice memo">
+<img src="docs/images/poko-demo.gif" width="396" alt="The V1B prototype running Pomodoro, the workout logger, voice memos, Settings and Now Playing">
 
-<sub>Left: the V1B prototype in hand, home ring on Voice Memos. Right: breadboard prototype, wheel-driven Pomodoro → timer → voice memo (2.2× speed).</sub>
+<sub>Left: the V1B prototype in hand, home ring on Voice Memos. Right: Pomodoro → workout logging → recording and browsing memos → Now Playing, all from the thumb wheel (3× speed).</sub>
 
 </div>
 
